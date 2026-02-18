@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyCite Pro - Global Edition</title>
+    <style>
+        :root { --primary: #1a73e8; --success: #34a853; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; }
+        .box { background: white; max-width: 500px; margin: auto; border-radius: 24px; padding: 25px; box-shadow: 0 12px 40px rgba(0,0,0,0.1); }
+        
+        .lang-nav { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 15px; margin-bottom: 20px; border-bottom: 1px solid #eee; -webkit-overflow-scrolling: touch; }
+        .lang-nav::-webkit-scrollbar { display: none; }
+        
+        .l-btn { flex: 0 0 auto; padding: 8px 16px; border: 1px solid #dadce0; background: white; border-radius: 20px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .l-btn.active { background: var(--primary); color: white; border-color: var(--primary); font-weight: bold; }
+        
+        h2 { text-align: center; color: var(--primary); font-size: 28px; margin: 10px 0 25px 0; }
+        label { font-size: 11px; font-weight: 700; color: #70757a; text-transform: uppercase; display: block; margin-bottom: 5px; }
+        select, input { width: 100%; padding: 14px; border: 1.5px solid #dadce0; border-radius: 12px; font-size: 16px; box-sizing: border-box; margin-bottom: 15px; }
+        
+        .btn-main { width: 100%; padding: 16px; background: var(--primary); color: white; border: none; border-radius: 14px; font-weight: bold; font-size: 16px; cursor: pointer; }
+
+        .card { background: #fff; border-left: 6px solid var(--primary); padding: 20px; border-radius: 14px; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.06); margin-top: 20px; text-align: left; }
+        .isi { font-size: 14.5px; line-height: 1.6; color: #202124; padding-right: 20px; margin-bottom: 15px; word-break: break-word; }
+        
+        .action-bar { display: flex; gap: 10px; }
+        .copy-btn, .view-btn { padding: 8px 12px; border: none; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
+        
+        .copy-btn { background: #e8f0fe; color: var(--primary); }
+        .copy-btn:active { background: var(--primary); color: white; }
+        
+        .view-btn { background: #e6f4ea; color: var(--success); text-decoration: none; }
+        .view-btn:active { background: var(--success); color: white; }
+
+        .rtl { direction: rtl; }
+        .rtl .card { border-left: none; border-right: 6px solid var(--primary); text-align: right; }
+    </style>
+</head>
+<body>
+
+<div class="box" id="mainBox">
+    <div class="lang-nav" id="langNav"></div>
+    <h2>EasyCite</h2>
+    
+    <label id="lSrc">SUMBER DATA</label>
+    <select id="tipe">
+        <option value="buku" id="oB">Buku</option>
+        <option value="jurnal" id="oJ">Jurnal</option>
+    </select>
+
+    <label id="lIn">JUDUL / DOI</label>
+    <input type="text" id="query" placeholder="...">
+    
+    <button class="btn-main" onclick="mulai()" id="bGen">GENERATE</button>
+    <div id="hasil-area"></div>
+</div>
+
+<script>
+    const lang = {
+        id: { f:"🇮🇩", n:"Indonesia", src:"SUMBER DATA", in:"JUDUL / DOI", gen:"GENERATE", wait:"Mencari...", b:"Buku", j:"Jurnal", cp:"Disalin!", view:"LIHAT SUMBER" },
+        en: { f:"🇺🇸", n:"English", src:"DATA SOURCE", in:"TITLE / DOI", gen:"GENERATE", wait:"Searching...", b:"Book", j:"Journal", cp:"Copied!", view:"VIEW SOURCE" },
+        de: { f:"🇩🇪", n:"Deutsch", src:"QUELLE", in:"TITEL / DOI", gen:"ERZEUGEN", wait:"Suche...", b:"Buch", j:"Journal", cp:"Kopiert!", view:"QUELLE ANSEHEN" },
+        ar: { f:"🇸🇦", n:"العربية", src:"مصدر البيانات", in:"العنوان", gen:"توليد", wait:"جاري البحث...", b:"كتاب", j:"مجلة", cp:"تم النسخ!", view:"عرض المصدر", rtl:true },
+        fr: { f:"🇫🇷", n:"Français", src:"SOURCE", in:"TITRE", gen:"GÉNÉRER", wait:"Recherche...", b:"Livre", j:"Journal", cp:"Copié!", view:"VOIR SOURCE" },
+        zh: { f:"🇨🇳", n:"中文", src:"数据源", in:"标题", gen:"生成", wait:"搜索中...", b:"书籍", j:"期刊", cp:"已复制!", view:"查看来源" },
+        es: { f:"🇪🇸", n:"Español", src:"FUENTE", in:"TÍTULO", gen:"GENERAR", wait:"Buscando...", b:"Libro", j:"Revista", cp:"Copiado!", view:"VER FUENTE" },
+        pt: { f:"🇵🇹", n:"Português", src:"FONTE", in:"TÍTULO", gen:"GERAR", wait:"Buscando...", b:"Livro", j:"Jornal", cp:"Copiado!", view:"VER FONTE" }
+    };
+
+    let cur = 'id';
+    const nav = document.getElementById('langNav');
+
+    Object.keys(lang).forEach(k => {
+        let btn = document.createElement('button');
+        btn.className = 'l-btn' + (k === 'id' ? ' active' : '');
+        btn.innerHTML = `<span>${lang[k].f}</span> ${lang[k].n}`;
+        btn.onclick = () => {
+            cur = k;
+            document.querySelectorAll('.l-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            updateUI();
+        };
+        nav.appendChild(btn);
+    });
+
+    function updateUI() {
+        const l = lang[cur];
+        document.getElementById('lSrc').innerText = l.src;
+        document.getElementById('lIn').innerText = l.in;
+        document.getElementById('bGen').innerText = l.gen;
+        document.getElementById('oB').innerText = l.b;
+        document.getElementById('oJ').innerText = l.j;
+        document.getElementById('mainBox').className = 'box' + (l.rtl ? ' rtl' : '');
+    }
+
+    async function mulai() {
+        const q = document.getElementById('query').value;
+        const t = document.getElementById('tipe').value;
+        const h = document.getElementById('hasil-area');
+        if(!q) return alert("Isi judul!");
+
+        document.getElementById('bGen').innerText = lang[cur].wait;
+        h.innerHTML = "";
+        
+        try {
+            let url = (t==='buku') ? `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=10` : `https://api.crossref.org/works?query=${q}&rows=10`;
+            const res = await fetch(url);
+            const data = await res.json();
+            const list = t==='buku' ? data.items : data.message.items;
+
+            list.forEach((item, i) => {
+                let info = (t==='buku') ? item.volumeInfo : item;
+                let link = (t==='buku') ? info.infoLink : (info.URL || "#");
+                let s = formatTxt(info, t);
+                
+                h.innerHTML += `
+                    <div class="card">
+                        <div class="isi" id="txt-${i}">${s}</div>
+                        <div class="action-bar">
+                            <button class="copy-btn" onclick="salin('txt-${i}')">
+                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                                COPY
+                            </button>
+                            <a href="${link}" target="_blank" class="view-btn">
+                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+                                ${lang[cur].view}
+                            </a>
+                        </div>
+                    </div>`;
+            });
+        } catch(e) { h.innerHTML = "Gagal memuat data."; }
+        document.getElementById('bGen').innerText = lang[cur].gen;
+    }
+
+    function formatTxt(b, t) {
+        if(t==='buku') {
+            const a = b.authors ? b.authors.join(', ') : 'Anon';
+            return `${a}. (${b.publishedDate?b.publishedDate.substring(0,4):'n.d.'}). ${b.title}. ${b.publisher||'n.p.'}.`;
+        } else {
+            const a = b.author ? b.author.map(x=>x.family).join(', ') : 'Anon';
+            return `${a}. (${b.created?b.created['date-parts'][0][0]:'n.d.'}). ${b.title[0]}. ${b['container-title']?b['container-title'][0]:'Journal'}.`;
+        }
+    }
+
+    function salin(id) {
+        navigator.clipboard.writeText(document.getElementById(id).innerText);
+        alert(lang[cur].cp);
+    }
+</script>
+</body>
+</html>
